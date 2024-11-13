@@ -102,10 +102,13 @@ const meta = {
         <p class="title">Comments</p>
         <form class="space-y-2">
             <input id="comment-body" class="bg-inherit outline outline-[--theme-accent] outline-1 rounded-md w-full md:w-1/2 h-20 p-1" placeholder="New Comment" type="text"><br>
-            <button type="button" id="comment-submit" class="rounded-md outline outline-1 outline-[--theme-accent] p-2 hover:bg-[--theme-accent]">Submit</button>
+            <!-- <button type="button" id="comment-submit" class="rounded-md outline outline-1 outline-[--theme-accent] p-2 hover:bg-[--theme-accent]">Submit</button> -->
+            <input type="submit" id="comment-submit" class="rounded-md outline outline-1 outline-[--theme-accent] p-2 hover:bg-[--theme-accent]" value="Add Comment">
         </form>
 
-        <ul class="mt-10" id="comments"></ul>
+        <ul class="mt-10" id="comments">
+            No Comments!
+        </ul>
     </div>
 </PageLayout>
 
@@ -123,17 +126,19 @@ const meta = {
             sort: '-created'
         })
 
-        const commentList = document.getElementById('comments') as HTMLUListElement
-        commentList.innerHTML = ''
+        if (comments.length != 0) {
+            const commentList = document.getElementById('comments') as HTMLUListElement
+            commentList.innerHTML = ''
 
-        comments.forEach(comment => {
-            let li = document.createElement('li')
-            let p = document.createElement('p')
-            p.innerText = `${comment.created}: ${comment.body}`
-            li.appendChild(p)
+            comments.forEach(comment => {
+                let li = document.createElement('li')
+                let p = document.createElement('p')
+                p.innerText = `${comment.created}: ${comment.body}`
+                li.appendChild(p)
 
-            commentList.appendChild(li)
-        })
+                commentList.appendChild(li)
+            })
+        }
     }
 
     await fetchComments()
@@ -147,7 +152,7 @@ const meta = {
         a.href='#comments'
         a.click()
 
-        pb.collection('comments').create({
+        await pb.collection('comments').create({
             "postid": `${post.id}`,
             "body": `${c_body.value}`
         })
