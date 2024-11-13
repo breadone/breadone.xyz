@@ -37,8 +37,9 @@ const meta = {
 	description: page.title,
     ogImage: pb.files.getUrl(page, page.headerImage)
 };
----
 
+---
+<div id="POSTID" title={page.id} hidden />
 <PageLayout meta={meta}>
     <div class="gap-x-4 lg:flex lg:items-start">
         <aside id="toc-container" class="sticky top-20 order-2 -me-32 hidden basis-64 ">
@@ -95,16 +96,76 @@ const meta = {
                 <Fragment set:html={content} />
             </div>
         </article>
+    </div>
 
+    <div class="mt-12 flex flex-col">
+        <p class="title">Comments</p>
+        <form class="space-y-2">
+            <input id="comment-body" class="bg-inherit outline outline-[--theme-accent] outline-1 rounded-md w-full md:w-1/2 h-20 p-1" placeholder="New Comment" type="text"><br>
+            <button type="button" id="comment-submit" class="rounded-md outline outline-1 outline-[--theme-accent] p-2 hover:bg-[--theme-accent]">Submit</button>
+        </form>
+
+        <ul class="mt-10" id="comments"></ul>
     </div>
 </PageLayout>
 
 <script>
-    function addLink(tag: Element, depth: number) {
+    // list comments
+    import Pocketbase from "pocketbase"
+    const pb = new Pocketbase(import.meta.env.PUBLIC_PB_URL)
+
+    const slug = document.URL.split('/')[4]
+    const post = await pb.collection('posts').getFirstListItem(`slug="${slug}"`)
+    
+    async function fetchComments() {
+        const comments = await pb.collection('comments').getFullList({
+            filter: `postid="${post.id}"`,
+            sort: '-created'
+        })
+
+        const commentList = document.getElementById('comments') as HTMLUListElement
+        commentList.innerHTML = ''
+
+        comments.forEach(comment => {
+            let li = document.createElement('li')
+            let p = document.createElement('p')
+            p.innerText = `${comment.created}: ${comment.body}`
+            li.appendChild(p)
+
+            commentList.appendChild(li)
+        })
+    }
+
+    await fetchComments()
+
+    // add comment
+    const c_body = document.getElementById('comment-body') as HTMLInputElement
+    const c_subm = document.getElementById('comment-submit') as HTMLButtonElement
+
+    c_subm.onclick = (async _  => {
+        let a = document.createElement('a')
+        a.href='#comments'
+        a.click()
+
+        pb.collection('comments').create({
+            "postid": `${post.id}`,
+            "body": `${c_body.value}`
+        })
+
+        c_body.value = ''
+
+        await fetchComments()
+    })
+
+</script>
+
+<script>
+    // toc code
+    function addLink(id: string, text: string, depth: number) {
         let lnk = document.createElement('a')
-        lnk.href=`#${tag.id}`
+        lnk.href=`#${id}`
         lnk.className = 'mt-2 text-[0.6875rem]'
-        lnk.innerHTML = `<span class="mr-1">${"#".repeat(depth)}</span>${tag.innerHTML}`
+        lnk.innerHTML = `<span class="mr-1">${"#".repeat(depth)}</span>${text}`
 
         let li = document.createElement('li')
         li.className = 'line-clamp-1 hover:text-accent'
@@ -129,10 +190,13 @@ const meta = {
         // Assign IDs in case they haven't been (by me)
         t.id = t.innerHTML
 
-        let depth = 1
+        let depth = 0
 
         // determine what depth to use
         switch (t.tagName) {
+            case 'H1':
+                depth = 1
+                break
             case 'H2':
                 depth = 2
                 break
@@ -141,6 +205,9 @@ const meta = {
                 break
         }
 
-        addLink(t, depth)
+        addLink(t.id, t.innerHTML, depth)
     }
+
+    // add comments link
+    addLink('comments', 'Comments', 0)
 </script>
